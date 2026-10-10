@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cloud Ascent — AWS Cloud Practitioner Study Game</title>
+<style>
+  :root {
+    --aws-navy: #0f172a;
+    --aws-navy-2: #1e293b;
+    --aws-navy-3: #334155;
+    --aws-orange: #f59e0b;
+    --aws-orange-hover: #d97706;
+    --aws-blue: #38bdf8;
+    --cloud-white: #f8fafc;
+    --muted: #94a3b8;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+    color: var(--cloud-white);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .game-wrap {
+    width: 100%;
+    max-width: 680px;
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 36px;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6);
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Progress & HUD */
+  .hud-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .ladder { 
+    display: flex; 
+    align-items: center; 
+    gap: 4px; 
+    margin-bottom: 16px; 
+  }
+  
+  .rung { 
+    flex: 1; 
+    height: 6px; 
+    border-radius: 3px; 
+    background: rgba(255, 255, 255, 0.1); 
+    transition: background 0.3s ease;
+  }
+  .rung.done { background: var(--success); }
+  .rung.current { background: var(--aws-orange); box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+
+  .lives { 
+    font-size: 14px; 
+    font-weight: 600;
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .stats-row { 
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 13px; 
+    font-weight: 600;
+    color: var(--muted); 
+    margin-bottom: 16px; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Card Layout */
+  .card { 
+    background: rgba(15, 23, 42, 0.6); 
+    border: 1px solid var(--border-color); 
+    border-radius: 16px; 
+    padding: 28px; 
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .question-text { 
+    font-size: 18px; 
+    font-weight: 600;
+    line-height: 1.6; 
+    margin-bottom: 24px; 
+    min-height: 54px;
+    color: #f1f5f9;
+  }
+
+  .options { 
+    display: grid; 
+    gap: 12px; 
+  }
+
+  .opt-btn {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--cloud-white);
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: 15px;
+    line-height: 1.4;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .opt-btn:hover:not(:disabled) { 
+    background: rgba(245, 158, 11, 0.1); 
+    border-color: rgba(245, 158, 11, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .opt-btn:disabled { cursor: default; }
+  .opt-btn.correct { 
+    background: rgba(34, 197, 94, 0.15) !important; 
+    border-color: var(--success) !important; 
+    color: #86efac !important;
+  }
+  .opt-btn.wrong { 
+    background: rgba(239, 68, 68, 0.15) !important; 
+    border-color: var(--danger) !important; 
+    color: #fca5a5 !important;
+  }
+
+  .explain {
+    margin-top: 20px; 
+    font-size: 14px; 
+    line-height: 1.5;
+    color: #e2e8f0;
+    background: rgba(56, 189, 248, 0.08);
+    border-left: 4px solid var(--aws-blue);
+    padding: 14px 18px; 
+    border-radius: 0 10px 10px 0; 
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .next-btn, .primary-btn, .mode-btn {
+    width: 100%; 
+    padding: 16px; 
+    border: none; 
+    border-radius: 12px;
+    font-weight: 700; 
+    font-size: 15px;
+    cursor: pointer; 
+    font-family: inherit;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .next-btn { 
+    display: none; 
+    margin-top: 20px; 
+    background: var(--aws-orange);
+    color: #0f172a;
+  }
+  .next-btn:hover { background: var(--aws-orange-hover); transform: translateY(-1px); }
+
+  .mode-btn {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #0f172a;
+    margin-bottom: 12px;
+  }
+  .mode-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+  .mode-btn small { 
+    display: block; 
+    font-weight: 500; 
+    font-size: 12px; 
+    margin-top: 3px; 
+    opacity: 0.85; 
+  }
+
+  .mode-btn.alt { 
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--cloud-white); 
+  }
+  .mode-btn.alt:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .primary-btn {
+    background: var(--aws-orange);
+    color: #0f172a;
+    margin-top: 24px;
+  }
+  .primary-btn:hover { background: var(--aws-orange-hover); }
+
+  .screen { display: none; }
+  .screen.active { display: block; animation: fadeIn 0.4s ease; }
+
+  .rules {
+    text-align: left; 
+    font-size: 14px; 
+    color: #cbd5e1; 
+    line-height: 1.7;
+    background: rgba(15, 23, 42, 0.5); 
+    border: 1px solid var(--border-color);
+    border-radius: 12px; 
+    padding: 20px; 
+    margin-bottom: 24px; 
+  }
+
+  .rules strong { color: var(--cloud-white); }
+
+  .big-badge { 
+    font-size: 64px; 
+    text-align: center; 
+    margin-bottom: 12px;
+    animation: bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes bounce {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .result-title { 
+    font-size: 22px; 
+    font-weight: 700;
+    text-align: center; 
+    margin-bottom: 8px; 
+  }
+
+  .result-sub { 
+    text-align: center; 
+    color: var(--muted); 
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  footer { 
+    text-align: center; 
+    font-size: 12px; 
+    color: var(--muted); 
+    margin-top: 24px; 
+  }
+</style>
+</head>
+<body>
+<div class="game-wrap">
+  <header>
+    <h1>☁️ Cloud Ascent</h1>
+    <div class="subtitle">AWS Certified Cloud Practitioner Study Climb</div>
+  </header>
+
+  <!-- START SCREEN -->
+  <div class="screen active" id="start-screen">
+    <div class="rules">
+      <strong>How to play:</strong><br>
+      1. Answer AWS Cloud Practitioner questions to climb the ladder, one rung per question.<br>
+      2. Every question has four choices and one correct answer. Choices are shuffled each time you play.<br>
+      3. Each wrong answer costs one life (☁️). You always see the correct answer and a short explanation before moving on.<br>
+      4. Reach the top before your lives run out to earn the Cloud Practitioner badge. Lives are set so that finishing means you scored at least <strong>70%</strong>, the same bar as the real exam.<br>
+      5. Out of lives? It's game over, but you can climb again with a fresh shuffle.
+    </div>
+    <button class="mode-btn" onclick="startGame(15)">Quick Climb<small>15 random questions</small></button>
+    <button class="mode-btn alt" id="full-btn" onclick="startGame(QUESTIONS.length)">Full Ascent<small id="full-small"></small></button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="screen" id="game-screen">
+    <div class="ladder" id="ladder"></div>
+    <div class="hud-header">
+      <div class="stats-row" style="margin:0;">
+        <span id="progress-label"></span>
+      </div>
+      <div class="lives" id="lives-display"></div>
+    </div>
+    <div class="stats-row" style="margin-top: 4px; margin-bottom: 12px;">
+      <span></span>
+      <span id="score-label"></span>
+    </div>
+    <div class="card">
+      <div class="question-text" id="question-text"></div>
+      <div class="options" id="options-container"></div>
+      <div class="explain" id="explain-box"></div>
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next Question →</button>
+    </div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div class="screen" id="end-screen">
+    <div class="big-badge" id="end-emoji"></div>
+    <div class="result-title" id="end-title"></div>
+    <div class="result-sub" id="end-sub"></div>
+    <button class="primary-btn" onclick="showScreen('start-screen')">Climb Again</button>
+  </div>
+
+</div>
+
+<script>
+
+const QUESTIONS = [
+  ["Which AWS pricing characteristic means you only pay for the compute, storage, or other resources you actually consume, with no long-term contracts required?",
+    ["Pay-as-you-go pricing", "Fixed annual licensing", "Flat-rate subscription", "Perpetual license"], 0,
+    "AWS charges only for the resources you use, so cost scales up or down with demand instead of a fixed fee."],
+  ["A company wants to increase or decrease its compute capacity automatically based on demand. Which cloud characteristic does this describe?",
+    ["High availability", "Elasticity", "Fault tolerance", "Data redundancy"], 1,
+    "Elasticity is the ability to scale resources up or down automatically to match demand."],
+  ["Under the AWS Shared Responsibility Model, which of the following is the CUSTOMER's responsibility, not AWS's?",
+    ["Physical security of data centers", "Maintenance of the underlying host hardware", "Configuration of security groups and IAM permissions", "Decommissioning of storage devices"], 2,
+    "AWS secures the cloud (hardware, facilities, infrastructure). The customer secures what is IN the cloud, such as IAM permissions and security group rules."],
+  ["Which deployment model runs applications entirely using cloud-based resources, with no on-premises infrastructure at all?",
+    ["Hybrid deployment", "On-premises deployment", "Cloud-based deployment", "Private cloud deployment"], 2,
+    "A cloud-based deployment runs every part of the application in the cloud, whether migrated or built cloud-native."],
+  ["What is the primary benefit of AWS's global infrastructure of Regions and Availability Zones for a company deploying an application?",
+    ["It guarantees the application is free to run", "It lets the company deploy closer to users and build fault-tolerant, highly available architectures", "It removes the need for any monitoring", "It automatically writes the application's code"], 1,
+    "Regions put workloads near users for lower latency, and multiple Availability Zones keep the app running if one zone has an issue."],
+
+  ["Which term describes data as objects in scalable buckets that is ideal for unstructured big data, analytics and archiving?",
+    ["Block Storage", "Object Storage", "File Storage", "Tape Storage"], 1,
+    "Object storage (such as Amazon S3) stores data as objects in buckets and scales to huge volumes of unstructured data."],
+  ["Which relational database service is supported by Amazon Aurora?",
+    ["Microsoft SQL Server", "PostgreSQL", "Oracle Database", "IBM DB2"], 1,
+    "Aurora is compatible with MySQL and PostgreSQL. It does not support SQL Server, Oracle, or DB2."],
+  ["Which AWS cloud deployment model is most often used to migrate, expand, or grow infrastructure into a cloud solution while linking internal systems to AWS Cloud resources?",
+    ["All-in cloud", "On-premises", "Hybrid", "Edge-only"], 2,
+    "A hybrid deployment connects on-premises infrastructure to cloud resources, so you can migrate or extend gradually."],
+  ["Which advantage does cloud computing have compared with on-premises deployment?",
+    ["Fixed capital expenditure constraints", "No upfront cost investment", "Mandatory long-term hardware commitments", "Complete control over physical server components"], 1,
+    "Cloud lets you start without buying hardware, turning large upfront capital expense into pay-as-you-go operating expense."],
+  ["Which value proposition is the dominant choice for most AWS customers?",
+    ["Complexity reduction", "Cost", "Hardware ownership", "Localization"], 1,
+    "Lower cost, through pay-as-you-go pricing and no upfront hardware spend, is the main driver for most customers."],
+
+  ["Which AWS service can implement the elasticity value proposition?",
+    ["Amazon Inspector", "Auto Scaling", "AWS Shield", "AWS Trusted Advisor"], 1,
+    "Auto Scaling adds or removes capacity automatically as demand changes, which is elasticity in practice."],
+  ["Which AWS service is used to create elastic block storage instances?",
+    ["S3", "EC2", "Glacier", "Route 53"], 1,
+    "EBS volumes are created and attached through the EC2 service, which is the closest match among these choices."],
+  ["What is the native AWS monitoring service for gathering and displaying actionable reports and meaningful metrics for AWS workloads?",
+    ["AWS CloudTrail", "CloudWatch", "AWS Config", "Amazon Macie"], 1,
+    "Amazon CloudWatch collects metrics and logs and shows them in dashboards. CloudTrail records API activity instead."],
+  ["Which service provides recommendations that help you follow AWS best practices and evaluates your account by using checks?",
+    ["Trusted Advisor", "AWS Support API", "Personal Health Dashboard", "Infrastructure Event Management"], 0,
+    "Trusted Advisor runs checks on your account for cost, performance, security, fault tolerance, and service limits."],
+  ["What is a popular key-value type database used for high-traffic web apps, e-commerce systems, and gaming applications?",
+    ["Amazon RDS", "Amazon Redshift", "Amazon DynamoDB", "Amazon Aurora"], 2,
+    "DynamoDB is a managed key-value and document NoSQL database built for low-latency access at very high scale."],
+
+  ["Which component is used to determine the subnet type in AWS?",
+    ["Route tables", "Internet gateway", "Security groups", "Network ACLs"], 0,
+    "A subnet is public if its route table sends traffic to an internet gateway, and private if it does not."],
+  ["Which element is the customer always responsible for in a Platform as a Service (PaaS) cloud type?",
+    ["Underlying operating system patching", "Physical server hardware", "Data", "Network virtualization"], 2,
+    "In every service model the customer remains responsible for their own data."],
+  ["Which term describes the software that produces and manages a virtual infrastructure, allowing multiple operating systems to run and share resources on a single physical machine?",
+    ["Hypervisor", "Kernel", "Container engine", "BIOS"], 0,
+    "A hypervisor creates and runs virtual machines, sharing one physical host's resources among them."],
+  ["Which term describes the accountability of operations and security between the provider and consumer depending on the type and level of service?",
+    ["Enterprise agreement model", "Shared responsibility model", "Cloud tenancy framework", "Operational matrix model"], 1,
+    "The shared responsibility model splits security duties between AWS and the customer based on the service used."],
+  ["A managed Site-to-Site VPN supports which dynamic routing protocol?",
+    ["OSPF", "EIGRP", "BGP", "IS-IS"], 2,
+    "AWS Site-to-Site VPN uses Border Gateway Protocol (BGP) for dynamic routing."],
+
+  ["Which offering is comprised of a combination of AWS Regions, Availability Zones, and edge locations?",
+    ["Global Infrastructure", "Local Zones", "Outposts", "Wavelength zones"], 0,
+    "The AWS Global Infrastructure is built from Regions, Availability Zones, and edge locations."],
+  ["Which virtual image configuration can be used to create an instance of a virtual machine in AWS?",
+    ["AMI (Amazon Machine Image)", "EBS Snapshot", "CloudFormation Template", "ISO image"], 0,
+    "An AMI packages the OS, software, and settings needed to launch an EC2 instance."],
+  ["What Reserved Instances pricing option will save you the most money?",
+    ["No Upfront", "Partial Upfront", "All Upfront", "Monthly Flexible"], 2,
+    "Paying the full term up front gives the deepest Reserved Instance discount."],
+  ["Which AWS tool allows you to configure a cost estimate that fits your unique business or personal needs with AWS products and services?",
+    ["AWS Cost Explorer", "Pricing Calculator", "AWS Budgets", "Trusted Advisor"], 1,
+    "The AWS Pricing Calculator estimates costs before you deploy. Cost Explorer and Budgets look at spend you have already incurred or planned."],
+  ["What is the main attribute of AWS Cloud Economics?",
+    ["It requires high initial capital expenditure", "It is a pay-as-you-go service", "It mandates long-term infrastructure locks", "It eliminates all operational management"], 1,
+    "Pay-as-you-go pricing is the core of AWS cloud economics."],
+
+  ["Which AWS managed service allows you to create custom directories that provide sign-up and sign-in options for your app users?",
+    ["AWS IAM", "AWS Cognito", "AWS Directory Service", "AWS Single Sign-On"], 1,
+    "Amazon Cognito adds user sign-up, sign-in, and access control to web and mobile apps."],
+  ["Which AWS resource contains customer compliance stories and case studies to ascertain how organizations in regulated industries have solved various compliance, governance, and audit tasks?",
+    ["AWS Artifact", "Compliance Solutions Guide", "Trusted Advisor", "AWS Whitepapers"], 1,
+    "The Compliance Solutions Guide collects customer stories and guidance for regulated industries."],
+  ["Which feature serves as an optional layer of security for the VPC that acts as a stateless firewall for controlling traffic in and out of one or more subnets?",
+    ["Security Groups", "Network access control lists (Network ACLs)", "Web Application Firewall", "Shield Advanced"], 1,
+    "Network ACLs are stateless and apply at the subnet level. Security groups are stateful and apply at the instance level."],
+  ["Which secure and resilient service uses hardware security modules to create, process, validate, and protect your cryptographic keys?",
+    ["AWS Secrets Manager", "AWS Key Management Service (KMS)", "AWS Certificate Manager", "Amazon GuardDuty"], 1,
+    "AWS KMS creates and controls encryption keys using hardware security modules."],
+  ["Which fully managed threat detection service uses findings driven by proprietary machine learning and AI algorithms?",
+    ["Amazon Inspector", "Amazon GuardDuty", "AWS Shield", "AWS WAF"], 1,
+    "GuardDuty continuously analyzes logs and network activity with machine learning to flag threats."],
+
+  ["Which console-based, on-demand, self-service auditing object retrieval service offers quick and easy access to AWS Compliance documentation and agreements?",
+    ["AWS Artifact", "AWS Audit Manager", "AWS Trusted Advisor", "AWS CloudTrail"], 0,
+    "AWS Artifact is the self-service portal for AWS compliance reports and agreements."],
+  ["Which attribute relates specifically to security group firewalls?",
+    ["Stateless", "Stateful", "Subnet-level application only", "Packet-filtering without connection tracking"], 1,
+    "Security groups are stateful: return traffic for an allowed request is automatically allowed."],
+  ["Which not-for-profit enterprise has a mission to promote the use of best practices for providing security assurance within cloud computing?",
+    ["Cloud Security Alliance (CSA)", "ISO Organization", "NIST", "ISACA"], 0,
+    "The Cloud Security Alliance is the not-for-profit dedicated to cloud security best practices."],
+  ["Which component is used to apply the web application firewall (WAF)?",
+    ["Web access control lists (Web ACLs)", "Route tables", "Security groups", "Internet gateways"], 0,
+    "You define AWS WAF rules in a web ACL and attach it to a resource such as CloudFront or an Application Load Balancer."],
+  ["What is the maximum number of managed policies that can be assigned to a user or role in IAM?",
+    ["5", "10", "20", "50"], 1,
+    "The default limit is 10 managed policies attached to a single IAM user or role."],
+
+  ["Which AWS service offers common languages to templatize the cloud environment?",
+    ["AWS OpsWorks", "CloudFormation", "AWS Elastic Beanstalk", "AWS Systems Manager"], 1,
+    "CloudFormation describes infrastructure in JSON or YAML templates (infrastructure as code)."],
+  ["Which component of auto-scaling is used to determine the parameters and settings?",
+    ["Auto Scaling group", "Launch template", "Scaling policy", "Elastic load balancer"], 1,
+    "A launch template defines the AMI, instance type, and other settings used for new instances."],
+  ["Which AWS component provides the information required to launch an instance?",
+    ["Instance profile", "Amazon machine image (AMI)", "EBS Volume", "Key pair"], 1,
+    "The AMI holds the operating system, software, and configuration needed to launch an instance."],
+  ["Which AWS service offers over 500 instances and choice of the latest processor, storage, networking, operating system, and purchase model to meet most cloud workload needs?",
+    ["Amazon Elastic Compute Cloud (EC2)", "AWS Lambda", "Amazon Lightsail", "AWS Fargate"], 0,
+    "EC2 offers the widest range of instance types and purchase options."],
+  ["Which definition language is commonly used in AWS to configure IAM managed policies, S3 bucket policies, and CloudFormation infrastructure as code?",
+    ["YAML only", "JSON", "XML", "Python"], 1,
+    "IAM and S3 policies are written in JSON, and CloudFormation templates can be JSON too."],
+
+  ["Which AWS service offers block level storage volumes for use with EC2 instances functioning like raw, unformatted block devices?",
+    ["Amazon S3", "EBS (Elastic Block Store)", "Amazon EFS", "AWS Storage Gateway"], 1,
+    "Amazon EBS provides persistent block storage volumes for EC2."],
+  ["Which AWS service securely delivers data, videos, applications, and APIs to global customers with low latency and high transfer speeds?",
+    ["Amazon Route 53", "CloudFront", "Amazon API Gateway", "AWS Direct Connect"], 1,
+    "CloudFront is the content delivery network that caches content at edge locations close to users."],
+  ["Which AWS service automates code deployments to any instance, including Amazon EC2 instances and on-premises servers, helping you avoid downtime during application updates?",
+    ["AWS CodeCommit", "AWS CodeDeploy", "AWS CodePipeline", "AWS Elastic Beanstalk"], 1,
+    "CodeDeploy automates deployments to EC2, on-premises servers, and more, with controls to limit downtime."],
+  ["Which AWS service provides a unified view for operational data, allowing you to collect and monitor metrics, collect log files, set alarms, and automatically react to changes in your AWS resources?",
+    ["AWS CloudTrail", "Amazon CloudWatch", "AWS Trusted Advisor", "AWS Config"], 1,
+    "CloudWatch combines metrics, logs, alarms, and automated responses in one place."],
+  ["Which deployment strategy maintains two identical production environments, with one serving live traffic while the other is updated and tested before traffic is shifted over?",
+    ["Rolling deployment", "Blue/green deployment", "Canary deployment", "All-at-once deployment"], 1,
+    "Blue/green keeps the old (blue) and new (green) environments side by side and switches traffic once green is verified."],
+
+  ["Which statement concerning S3 is true?",
+    ["S3 is not eligible for the free tier model", "Public access is denied by default", "Buckets can only be accessed with a static IP", "S3 stores data exclusively as block-level storage"], 1,
+    "New S3 buckets block public access by default, and S3 stores objects rather than blocks."],
+  ["Which AWS option gives customers the ability to change the instance family, OS, or tenancy associated with their instance at any time?",
+    ["Standard Reserved Instance", "Convertible reserved instance", "Spot instance", "Savings plan"], 1,
+    "Convertible Reserved Instances can be exchanged for different instance families, operating systems, or tenancy."],
+  ["Which are valid methods of payment for an AWS Account in the United States?",
+    ["Credit and debit cards issued by American Express, Visa, and MasterCard, alongside ACH direct debit payments for qualifying customers", "Amazon gift cards and direct PayPal transfers only", "Cryptocurrency and direct bank wire transfers exclusively", "Prepaid debit cards and store credit vouchers"], 0,
+    "AWS accepts major credit and debit cards, plus ACH direct debit for qualifying US customers."],
+  ["Which AWS service offers insights to automatically detect unusual API activities in AWS accounts?",
+    ["Amazon CloudWatch", "CloudTrail (CloudTrail Insights)", "Amazon Inspector", "GuardDuty"], 1,
+    "CloudTrail records API calls, and CloudTrail Insights flags unusual patterns in that activity."],
+  ["Which support plan is the minimum recommended tier if you have production workloads in AWS?",
+    ["Basic", "Developer", "Business", "Enterprise"], 2,
+    "The Business plan is the lowest tier recommended for production workloads."],
+  ["Which AWS service reduces downtime and data loss by offering fast, dependable recovery of physical, virtual, and cloud-based servers into AWS?",
+    ["AWS Backup", "CloudEndure (Elastic Disaster Recovery)", "AWS DMS", "Amazon S3 Glacier"], 1,
+    "CloudEndure Disaster Recovery, now AWS Elastic Disaster Recovery, replicates servers so they can be recovered quickly in AWS."],
+  ["AWS Organizations let you centrally manage your environment as you scale. Which component of Organizations allows you to better group up your accounts?",
+    ["Buckets", "Containers", "Units (Organizational Units / OUs)", "Vaults"], 2,
+    "Organizational Units (OUs) group accounts so you can apply policies to them together."],
+  ["Which AWS service offers recommendations and account evaluation using checks to identify ways to optimize your infrastructure, improve security and performance, reduce costs, and monitor service quotas?",
+    ["Trusted Advisor", "AWS Support API", "Personal Health Dashboard", "Compute Optimizer"], 0,
+    "Trusted Advisor checks cost, performance, security, fault tolerance, and service quotas."],
+  ["Which AWS documentation resource provides a mechanism for regularly evaluating workloads, identifying high-risk issues, and recording improvements?",
+    ["White papers", "Well-Architected initiative / Well-Architected Tool", "AWS Glossary", "Case Studies"], 1,
+    "The AWS Well-Architected Tool reviews workloads against best-practice pillars and tracks improvements."]
+];
+
+// ---- GAME STATE ----
+let deck = [];
+let current = 0;
+let score = 0;
+let lives = 0;
+let maxLives = 0;
+let answered = false;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function buildLadder() {
+  const ladder = document.getElementById('ladder');
+  ladder.innerHTML = '';
+  for (let i = 0; i < deck.length; i++) {
+    const rung = document.createElement('div');
+    rung.className = 'rung';
+    if (i < current) rung.classList.add('done');
+    else if (i === current) rung.classList.add('current');
+    ladder.appendChild(rung);
+  }
+}
+
+function renderLives() {
+  document.getElementById('lives-display').textContent = '☁️ × ' + lives + ' / ' + maxLives;
+}
+
+function startGame(count) {
+  const n = Math.min(count, QUESTIONS.length);
+  deck = shuffle(QUESTIONS).slice(0, n);
+  // Lives are set so that surviving to the end means scoring at least 70%.
+  maxLives = Math.floor(n * 0.3) + 1;
+  lives = maxLives;
+  current = 0;
+  score = 0;
+  showScreen('game-screen');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  answered = false;
+  buildLadder();
+  renderLives();
+  document.getElementById('progress-label').textContent = 'Question ' + (current + 1) + ' of ' + deck.length;
+  document.getElementById('score-label').textContent = 'Score: ' + score;
+
+  const entry = deck[current];
+  const correctText = entry[1][entry[2]];
+  document.getElementById('question-text').textContent = entry[0];
+
+  const container = document.getElementById('options-container');
+  container.innerHTML = '';
+  shuffle(entry[1]).forEach(function (opt) {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = opt;
+    btn.dataset.correct = (opt === correctText) ? '1' : '0';
+    btn.onclick = function () { selectAnswer(btn); };
+    container.appendChild(btn);
+  });
+
+  const explainBox = document.getElementById('explain-box');
+  explainBox.style.display = 'none';
+  explainBox.textContent = '';
+  document.getElementById('next-btn').style.display = 'none';
+}
+
+function selectAnswer(chosen) {
+  if (answered) return;
+  answered = true;
+  const isCorrect = chosen.dataset.correct === '1';
+
+  document.querySelectorAll('.opt-btn').forEach(function (b) {
+    b.disabled = true;
+    if (b.dataset.correct === '1') b.classList.add('correct');
+  });
+  if (isCorrect) {
+    score++;
+  } else {
+    chosen.classList.add('wrong');
+    lives--;
+  }
+  renderLives();
+  document.getElementById('score-label').textContent = 'Score: ' + score;
+
+  const explainBox = document.getElementById('explain-box');
+  explainBox.textContent = (isCorrect ? 'Correct! ' : 'Not quite. ') + deck[current][3];
+  explainBox.style.display = 'block';
+
+  const next = document.getElementById('next-btn');
+  if (lives <= 0) next.textContent = 'See Results →';
+  else next.textContent = (current === deck.length - 1) ? 'Finish →' : 'Next Question →';
+  next.style.display = 'block';
+}
+
+function nextQuestion() {
+  if (lives <= 0) { endGame(); return; }
+  current++;
+  if (current >= deck.length) { endGame(); return; }
+  renderQuestion();
+}
+
+function endGame() {
+  showScreen('end-screen');
+  const answeredCount = lives <= 0 ? current + 1 : deck.length;
+  const pct = Math.round((score / deck.length) * 100);
+  const passed = lives > 0;
+  document.getElementById('end-emoji').textContent = passed ? '🏆' : '💥';
+  document.getElementById('end-title').textContent = passed
+    ? 'Summit Reached: Cloud Practitioner Badge Earned!'
+    : 'Out of Lives: The Cloud Got You This Time';
+  document.getElementById('end-sub').textContent = passed
+    ? 'You scored ' + score + ' / ' + deck.length + ' (' + pct + '%), clearing the 70% bar the real exam uses.'
+    : 'You got ' + score + ' right in ' + answeredCount + ' questions before running out of lives. Review the explanations and try again.';
+}
+
+document.getElementById('full-small').textContent = 'All ' + QUESTIONS.length + ' questions';
+buildLadder();
+</script>
+</body>
+</html>
